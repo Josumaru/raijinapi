@@ -162,6 +162,8 @@ const getStream = async (req, res) => {
             })
             const stream = (await Promise.all(promises)).filter(Boolean);
 
+
+            // 403 Issue
             for (let i = 0; i < stream.length; i++) {
                 try {
                     const mirrorResponse = await fetchServer(stream[i]);
@@ -187,7 +189,60 @@ const getStream = async (req, res) => {
             data = video;
         }
 
+        return apiResponse(res, responses.success.code, data);
+    } catch (error) {
+        console.log(error)
+        return apiResponse(res, responses.error.code);
+    }
+}
 
+const getMirror = async (req, res) => {
+    console.log(new Date())
+    let data = {};
+    let part = 1;
+    let season = 1;
+    let episode = "";
+    const endpoint = req.params.endpoint;
+    const segments = endpoint.split("-");
+    let codename = segments[0];
+    console.log(segments);
+    for(let segment of segments) {
+        let seasonMatch = segment.match(/s(\d+)/);
+        let partMatch = segment.match(/p(\d+)/);
+        let episodeMatch = segment.match(/(\d+)/)
+        if (seasonMatch) season = parseInt(seasonMatch[1]);
+        if (partMatch) part = parseInt(partMatch[1]);
+        if (episodeMatch) episode = parseInt(episodeMatch[1]);
+    }
+
+    const url = `${baseUrl}/episode/${endpoint}`;
+
+    try {
+        const response = await fetchServer(url)
+        if (response.status == 200) {
+            const $ = load(response.data);
+            const elements = $(".download")
+            const promises = [];
+            elements.find("ul > li > a").each((index, element) => {
+                const quality = $(element).text();
+                const mirror = $(element).attr("href");
+                if (quality.toLocaleLowerCase() == "kfiles" || quality.toLocaleLowerCase() == "kraken") {
+                    const location = axios.head(mirror).then(res => res.request["res"]["responseUrl"]);
+                    promises.push(location);
+                }
+            })
+            const stream = (await Promise.all(promises)).filter(Boolean);
+            for (let i = 0; i < stream.length; i++) {
+                stream[i] = {
+                    endpoint: stream[i],
+                    episode,
+                    codename,
+                    season,
+                    part,
+                }
+            }
+            data = stream;
+        }
 
         return apiResponse(res, responses.success.code, data);
     } catch (error) {
@@ -196,8 +251,6 @@ const getStream = async (req, res) => {
     }
 }
 
-const getRaijin = () => {
-    return 'Hell'
-}
 
-export { getAnime, getDetail, getStream, getRaijin };
+
+export { getAnime, getDetail, getStream, getMirror };
