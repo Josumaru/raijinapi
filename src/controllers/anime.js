@@ -3,9 +3,13 @@ import { apiResponse, fetchServer } from "../helpers/services.js"
 import { load } from "cheerio";
 import axios from "axios";
 
+let animeLogger = 0;
+let detailLogger = 0;
+let mirrorLogger = 0;
+let streamLogger = 0;
 
 const getAnime = async (req, res) => {
-    console.log(new Date())
+    console.log(`getAnime ${animeLogger++}`);
     const data = [];
     const page = req.params.page == 0 ? 1 : req.params.page;
     const status = req.params.status
@@ -15,7 +19,6 @@ const getAnime = async (req, res) => {
     try {
         let response = await fetchServer(url, res)
         if (response.status == 200) {
-            console.log(response.status);
             const $ = load(response.data);
 
             const paginations = $(".pagenavix");
@@ -51,14 +54,13 @@ const getAnime = async (req, res) => {
         }
         return apiResponse(res, responses.error.code);
     } catch (error) {
-        console.log(error)
         return apiResponse(res, responses.error.code);
     }
 }
 
 
 const getDetail = async (req, res) => {
-    console.log(new Date())
+    console.log(`getDetail ${detailLogger++}`);
     let data = {};
     const endpoint = req.params.endpoint
     const url = `${baseUrl}/anime/${endpoint}`
@@ -117,7 +119,6 @@ const getDetail = async (req, res) => {
         }
         return apiResponse(res, responses.success.code, data);
     } catch (error) {
-        console.log(error)
         return apiResponse(res, responses.error.code);
     }
 }
@@ -125,7 +126,7 @@ const getDetail = async (req, res) => {
 
 
 const getStream = async (req, res) => {
-    console.log(new Date())
+    console.log(`getStream ${streamLogger++}`);
     let data = {};
     let video = [];
     let part = 1;
@@ -134,7 +135,6 @@ const getStream = async (req, res) => {
     const endpoint = req.params.endpoint;
     const segments = endpoint.split("-");
     let codename = segments[0];
-    console.log(segments);
     for(let segment of segments) {
         let seasonMatch = segment.match(/s(\d+)/);
         let partMatch = segment.match(/p(\d+)/);
@@ -155,7 +155,7 @@ const getStream = async (req, res) => {
             elements.find("ul > li > a").each((index, element) => {
                 const quality = $(element).text();
                 const mirror = $(element).attr("href");
-                if (quality.toLocaleLowerCase() == "kfiles" || quality.toLocaleLowerCase() == "kraken") {
+                if (quality.toLocaleLowerCase().trim() == "kfiles" || quality.toLocaleLowerCase().trim() == "kraken") {
                     const location = axios.head(mirror).then(res => res.request["res"]["responseUrl"]);
                     promises.push(location);
                 }
@@ -182,22 +182,19 @@ const getStream = async (req, res) => {
                         });
                     }
                 } catch (error) {
-                    console.log(error);
                 }
             }
-            console.log(video);
             data = video;
         }
 
         return apiResponse(res, responses.success.code, data);
     } catch (error) {
-        console.log(error)
         return apiResponse(res, responses.error.code);
     }
 }
 
 const getMirror = async (req, res) => {
-    console.log(new Date())
+    console.log(`getMirror ${mirrorLogger++}`);
     let data = {};
     let part = 1;
     let season = 1;
@@ -205,7 +202,6 @@ const getMirror = async (req, res) => {
     const endpoint = req.params.endpoint;
     const segments = endpoint.split("-");
     let codename = segments[0];
-    console.log(segments);
     for(let segment of segments) {
         let seasonMatch = segment.match(/s(\d+)/);
         let partMatch = segment.match(/p(\d+)/);
@@ -226,7 +222,7 @@ const getMirror = async (req, res) => {
             elements.find("ul > li > a").each((index, element) => {
                 const quality = $(element).text();
                 const mirror = $(element).attr("href");
-                if (quality.toLocaleLowerCase() == "kfiles" || quality.toLocaleLowerCase() == "kraken") {
+                if (quality.toLocaleLowerCase().trim() == "kfiles" || quality.toLocaleLowerCase().trim() == "kraken") {
                     const location = axios.head(mirror).then(res => res.request["res"]["responseUrl"]);
                     promises.push(location);
                 }
@@ -246,7 +242,6 @@ const getMirror = async (req, res) => {
 
         return apiResponse(res, responses.success.code, data);
     } catch (error) {
-        console.log(error)
         return apiResponse(res, responses.error.code);
     }
 }
